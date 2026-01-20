@@ -163,3 +163,37 @@ export function mergeWithUpdate<T extends { lastUpdateTime?: number }>(
     return { ...localState };
   }
 }
+
+/**
+ * Result of exportAppState() function
+ */
+export interface ExportResult {
+  content: string; // Serialized JSON
+  state: AppState; // Original state object
+  stats: {
+    sessionCount: number;
+    messageCount: number;
+    totalSize: number; // Bytes
+  };
+}
+
+/**
+ * Core export logic - used by both manual export and auto-backup
+ * Extracts state and provides metadata for tracking
+ */
+export function exportAppState(): ExportResult {
+  const state = getLocalAppState();
+  const content = JSON.stringify(state);
+
+  const chatState = state[StoreKey.Chat];
+  const stats = {
+    sessionCount: chatState.sessions.length,
+    messageCount: chatState.sessions.reduce(
+      (sum, session) => sum + session.messages.length,
+      0,
+    ),
+    totalSize: new Blob([content]).size,
+  };
+
+  return { content, state, stats };
+}

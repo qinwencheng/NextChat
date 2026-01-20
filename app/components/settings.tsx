@@ -84,6 +84,7 @@ import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarPicker } from "./emoji";
 import { getClientConfig } from "../config/client";
 import { useSyncStore } from "../store/sync";
+import { useAutoBackupStore } from "../store/autobackup";
 import { nanoid } from "nanoid";
 import { useMaskStore } from "../store/mask";
 import { ProviderType } from "../utils/cloud";
@@ -580,6 +581,247 @@ function SyncItems() {
     </>
   );
 }
+
+function BackupManagerModal(props: { onClose: () => void }) {
+  const autoBackupStore = useAutoBackupStore();
+  const [loading, setLoading] = useState(false);
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  };
+
+  const formatTime = (timestamp: number): string => {
+    return new Date(timestamp).toLocaleString();
+  };
+
+  const handleRestore = async (backupId: string) => {
+    if (!confirm(Locale.BackupManager.DeleteConfirm)) return;
+    setLoading(true);
+    try {
+      await autoBackupStore.restoreBackup(backupId);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExport = async (backupId: string) => {
+    setLoading(true);
+    try {
+      await autoBackupStore.exportBackup(backupId);
+      showToast(Locale.BackupManager.ExportSuccess);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (backupId: string) => {
+    if (!confirm(Locale.BackupManager.DeleteConfirm)) return;
+    setLoading(true);
+    try {
+      await autoBackupStore.deleteBackup(backupId);
+      showToast(Locale.BackupManager.DeleteSuccess);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-mask">
+      <Modal
+        title={Locale.BackupManager.Title}
+        onClose={props.onClose}
+        actions={[
+          <IconButton
+            key="close"
+            text={Locale.UI.Close}
+            onClick={props.onClose}
+            bordered
+          />,
+        ]}
+      >
+        <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
+          {autoBackupStore.backupHistory.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "50px 0",
+                color: "var(--gray)",
+              }}
+            >
+              {Locale.Settings.AutoBackup.NoBackupsYet}
+            </div>
+          ) : (
+            <List>
+              {autoBackupStore.backupHistory.map((backup) => (
+                <ListItem
+                  key={backup.id}
+                  title={backup.fileName}
+                  subTitle={`${formatTime(backup.timestamp)} · ${formatBytes(
+                    backup.size,
+                  )} · ${backup.sessionCount} sessions, ${
+                    backup.messageCount
+                  } messages`}
+                >
+                  <div style={{ display: "flex", gap: "5px" }}>
+                    <IconButton
+                      icon={<DownloadIcon />}
+                      text={Locale.BackupManager.Restore}
+                      onClick={() => handleRestore(backup.id)}
+                      disabled={loading}
+                    />
+                    <IconButton
+                      icon={<UploadIcon />}
+                      text={Locale.BackupManager.Export}
+                      onClick={() => handleExport(backup.id)}
+                      disabled={loading}
+                    />
+                    <IconButton
+                      icon={<ClearIcon />}
+                      text={Locale.BackupManager.Delete}
+                      onClick={() => handleDelete(backup.id)}
+                      disabled={loading}
+                    />
+                  </div>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function AutoBackupItems() {
+  const autoBackupStore = useAutoBackupStore();
+  const [showBackupManager, setShowBackupManager] = useState(false);
+  const isApp = !!getClientConfig()?.isApp;
+
+  return (
+    <>
+      <List>
+        <ListItem
+          title={Locale.Settings.AutoBackup.Title}
+          subTitle={Locale.Settings.AutoBackup.SubTitle}
+        >
+          <input
+            type="checkbox"
+            checked={autoBackupStore.enabled}
+            onChange={(e) =>
+              autoBackupStore.updateSettings({ enabled: e.target.checked })
+            }
+          ></input>
+        </ListItem>
+
+        {autoBackupStore.enabled && (
+          <>
+            <ListItem
+              title={Locale.Settings.AutoBackup.Interval}
+              subTitle={Locale.Settings.AutoBackup.IntervalDesc(
+                autoBackupStore.intervalHours,
+              )}
+            >
+              <InputRange
+                value={autoBackupStore.intervalHours}
+                min="1"
+                max="168"
+                step="1"
+                onChange={(e) =>
+                  autoBackupStore.updateSettings({
+                    intervalHours: parseInt(e.currentTarget.value),
+                  })
+                }
+                aria={Locale.Settings.AutoBackup.Interval}
+              ></InputRange>
+            </ListItem>
+
+            <ListItem
+              title={Locale.Settings.AutoBackup.MaxBackups}
+              subTitle={Locale.Settings.AutoBackup.MaxBackupsDesc(
+                autoBackupStore.maxBackups,
+              )}
+            >
+              <InputRange
+                value={autoBackupStore.maxBackups}
+                min="1"
+                max="50"
+                step="1"
+                onChange={(e) =>
+                  autoBackupStore.updateSettings({
+                    maxBackups: parseInt(e.currentTarget.value),
+                  })
+                }
+                aria={Locale.Settings.AutoBackup.MaxBackups}
+              ></InputRange>
+            </ListItem>
+
+            {isApp && (
+              <ListItem
+                title={Locale.Settings.AutoBackup.BackupPath}
+                subTitle={
+                  autoBackupStore.backupPath ||
+                  Locale.Settings.AutoBackup.DefaultPath
+                }
+              >
+                <IconButton
+                  text={Locale.Settings.AutoBackup.SelectPath}
+                  onClick={() => autoBackupStore.selectBackupPath()}
+                  bordered
+                />
+              </ListItem>
+            )}
+
+            <ListItem
+              title={Locale.Settings.AutoBackup.Status}
+              subTitle={
+                Locale.Settings.AutoBackup.BackupCount(
+                  autoBackupStore.backupHistory.length,
+                ) +
+                " · " +
+                (autoBackupStore.lastBackupTime === 0
+                  ? Locale.Settings.AutoBackup.Never
+                  : new Date(autoBackupStore.lastBackupTime).toLocaleString())
+              }
+            >
+              <div style={{ display: "flex" }}>
+                <IconButton
+                  text={Locale.Settings.AutoBackup.BackupNow}
+                  onClick={async () => {
+                    try {
+                      await autoBackupStore.createBackup();
+                      showToast(Locale.Settings.AutoBackup.CreateSuccess);
+                    } catch (error) {
+                      showToast(Locale.Settings.AutoBackup.CreateFailed);
+                    }
+                  }}
+                  bordered
+                  icon={<UploadIcon />}
+                />
+                <IconButton
+                  text={Locale.Settings.AutoBackup.ViewBackups}
+                  onClick={() => setShowBackupManager(true)}
+                  bordered
+                  icon={<ConfigIcon />}
+                  style={{ marginLeft: 10 }}
+                />
+              </div>
+            </ListItem>
+          </>
+        )}
+      </List>
+
+      {showBackupManager && (
+        <BackupManagerModal onClose={() => setShowBackupManager(false)} />
+      )}
+    </>
+  );
+}
+
+import { AutoBackupItems } from "./auto-backup/auto-backup-settings";
 
 export function Settings() {
   const navigate = useNavigate();
@@ -1459,44 +1701,44 @@ export function Settings() {
     </>
   );
 
-  const ai302ConfigComponent = accessStore.provider === ServiceProvider["302.AI"] && (
+  const ai302ConfigComponent = accessStore.provider ===
+    ServiceProvider["302.AI"] && (
     <>
       <ListItem
-          title={Locale.Settings.Access.AI302.Endpoint.Title}
-          subTitle={
-            Locale.Settings.Access.AI302.Endpoint.SubTitle +
-            AI302.ExampleEndpoint
+        title={Locale.Settings.Access.AI302.Endpoint.Title}
+        subTitle={
+          Locale.Settings.Access.AI302.Endpoint.SubTitle + AI302.ExampleEndpoint
+        }
+      >
+        <input
+          aria-label={Locale.Settings.Access.AI302.Endpoint.Title}
+          type="text"
+          value={accessStore.ai302Url}
+          placeholder={AI302.ExampleEndpoint}
+          onChange={(e) =>
+            accessStore.update(
+              (access) => (access.ai302Url = e.currentTarget.value),
+            )
           }
-        >
-          <input
-            aria-label={Locale.Settings.Access.AI302.Endpoint.Title}
-            type="text"
-            value={accessStore.ai302Url}
-            placeholder={AI302.ExampleEndpoint}
-            onChange={(e) =>
-              accessStore.update(
-                (access) => (access.ai302Url = e.currentTarget.value),
-              )
-            }
-          ></input>
-        </ListItem>
-        <ListItem
-          title={Locale.Settings.Access.AI302.ApiKey.Title}
-          subTitle={Locale.Settings.Access.AI302.ApiKey.SubTitle}
-        >
-          <PasswordInput
-            aria-label={Locale.Settings.Access.AI302.ApiKey.Title}
-            value={accessStore.ai302ApiKey}
-            type="text"
-            placeholder={Locale.Settings.Access.AI302.ApiKey.Placeholder}
-            onChange={(e) => {
-              accessStore.update(
-                (access) => (access.ai302ApiKey = e.currentTarget.value),
-              );
-            }}
-          />
-        </ListItem>
-      </>
+        ></input>
+      </ListItem>
+      <ListItem
+        title={Locale.Settings.Access.AI302.ApiKey.Title}
+        subTitle={Locale.Settings.Access.AI302.ApiKey.SubTitle}
+      >
+        <PasswordInput
+          aria-label={Locale.Settings.Access.AI302.ApiKey.Title}
+          value={accessStore.ai302ApiKey}
+          type="text"
+          placeholder={Locale.Settings.Access.AI302.ApiKey.Placeholder}
+          onChange={(e) => {
+            accessStore.update(
+              (access) => (access.ai302ApiKey = e.currentTarget.value),
+            );
+          }}
+        />
+      </ListItem>
+    </>
   );
 
   return (
@@ -1743,6 +1985,8 @@ export function Settings() {
         </List>
 
         <SyncItems />
+
+        <AutoBackupItems />
 
         <List>
           <ListItem

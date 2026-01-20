@@ -3,6 +3,7 @@ import { ApiPath, STORAGE_KEY, StoreKey } from "../constant";
 import { createPersistStore } from "../utils/store";
 import {
   AppState,
+  exportAppState,
   getLocalAppState,
   GetStoreState,
   mergeAppState,
@@ -56,7 +57,7 @@ export const useSyncStore = createPersistStore(
     },
 
     export() {
-      const state = getLocalAppState();
+      const { content } = exportAppState();
       const datePart = isApp
         ? `${new Date().toLocaleDateString().replace(/\//g, "_")} ${new Date()
             .toLocaleTimeString()
@@ -64,7 +65,7 @@ export const useSyncStore = createPersistStore(
         : new Date().toLocaleString();
 
       const fileName = `Backup-${datePart}.json`;
-      downloadAs(JSON.stringify(state), fileName);
+      downloadAs(content, fileName);
     },
 
     async import() {

@@ -266,6 +266,34 @@ const en: LocaleType = {
       },
       ImportFailed: "Failed to import from file",
     },
+    AutoBackup: {
+      Title: "Auto Backup",
+      SubTitle: "Automatically backup your data at regular intervals",
+      Enabled: "Enable Auto Backup",
+      Interval: "Backup Interval (hours)",
+      IntervalDesc: (hours: number) =>
+        `Backup every ${hours} hour${hours > 1 ? "s" : ""}`,
+      MaxBackups: "Maximum Backups to Retain",
+      MaxBackupsDesc: (count: number) =>
+        `Keep up to ${count} backup file${count > 1 ? "s" : ""}`,
+      BackupPath: "Backup Path",
+      BackupPathDesc: "Desktop: Where backup files are saved",
+      SelectPath: "Select Folder",
+      DefaultPath: "Use Default Path",
+      Status: "Backup Status",
+      LastBackup: "Last Backup",
+      Never: "Never",
+      BackupCount: (count: number) =>
+        `${count} backup${count !== 1 ? "s" : ""}`,
+      TotalSize: (size: string) => `Total size: ${size}`,
+      BackupNow: "Backup Now",
+      ViewBackups: "View Backups",
+      ClearAll: "Clear All Backups",
+      ClearAllConfirm: "Are you sure you want to delete all auto-backups?",
+      CreateSuccess: "Backup created successfully",
+      CreateFailed: "Failed to create backup",
+      NoBackupsYet: "No backups yet",
+    },
     Mask: {
       Splash: {
         Title: "Mask Splash Screen",
@@ -869,6 +897,17 @@ const en: LocaleType = {
     },
     GenerateParams: "Generate Params",
     Detail: "Detail",
+  },
+  BackupManager: {
+    Title: "Auto Backup Manager",
+    Restore: "Restore",
+    Export: "Export",
+    Delete: "Delete",
+    DeleteConfirm: "Delete this backup?",
+    RestoreSuccess: "Backup restored successfully",
+    RestoreFailed: "Failed to restore backup",
+    ExportSuccess: "Backup exported successfully",
+    DeleteSuccess: "Backup deleted successfully",
   },
 };
 
