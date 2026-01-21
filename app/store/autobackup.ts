@@ -22,29 +22,14 @@ async function getDefaultBackupPath(): Promise<string> {
 }
 
 /**
- * Metadata for a single backup file
- */
-export interface BackupRecord {
-  id: string; // Unique identifier
-  timestamp: number; // Creation time
-  fileName: string; // File name
-  size: number; // File size in bytes
-  sessionCount: number; // Number of chat sessions
-  messageCount: number; // Total messages
-}
-
-/**
  * Auto-backup store state
  */
 export interface AutoBackupState {
   enabled: boolean; // Feature toggle
   intervalHours: number; // Backup frequency (1-168 hours)
-  maxBackups: number; // Max files to retain (1-50)
   backupPath: string; // User-configurable backup directory path (Desktop only)
   lastBackupTime: number; // Timestamp of last backup
-  lastBackupHash: string; // Hash of last backup to detect changes
-  backupHistory: BackupRecord[]; // Metadata of all backups
-  totalSize: number; // Total size of all backups (bytes)
+  lastBackupHash: string; // Hash of markers to detect changes
 }
 
 /**
@@ -53,18 +38,10 @@ export interface AutoBackupState {
 const DEFAULT_AUTO_BACKUP_STATE: AutoBackupState = {
   enabled: false, // Opt-in
   intervalHours: 24, // Daily backups
-  maxBackups: 10, // Retain last 10 backups
   backupPath: "", // Will use platform default if empty
   lastBackupTime: 0,
   lastBackupHash: "",
-  backupHistory: [],
-  totalSize: 0,
 };
-
-/**
- * Maximum total size limit (100 MB)
- */
-const MAX_TOTAL_SIZE = 100 * 1024 * 1024;
 
 /**
  * Simple hash function for string
@@ -92,24 +69,18 @@ export const useAutoBackupStore = createPersistStore(
     shouldCreateBackup: () => {
       const state = get();
       const now = Date.now();
+      const intervalHours = Math.max(1, state.intervalHours || 24);
       const timeSinceLastBackup = now - state.lastBackupTime;
-      const intervalMs = state.intervalHours * 60 * 60 * 1000;
+      const intervalMs = intervalHours * 60 * 60 * 1000;
 
-      // Check if interval has passed
+      // 1. Check if interval has passed
       if (timeSinceLastBackup < intervalMs) return false;
 
-      // Check total size
-      if (state.totalSize > MAX_TOTAL_SIZE) {
-        console.warn("[AutoBackup] Total size exceeded limit, skipping backup");
-        return false;
-      }
-
-      // Check if data has changed since last backup
+      // 2. Check if data has changed since last backup
       const { content, stats } = exportAppState();
-      // Calculate a more reliable hash based on content length, last update time, and stats
-      // This is a lightweight approximation of content hashing
+      // Use markers that change when data changes, excluding the timestamp of previous backup
       const currentHash = simpleHash(
-        `${content.length}-${state.lastBackupTime}-${stats.sessionCount}-${stats.messageCount}`,
+        `${content.length}-${stats.sessionCount}-${stats.messageCount}`,
       );
 
       return currentHash !== state.lastBackupHash;
@@ -128,170 +99,27 @@ export const useAutoBackupStore = createPersistStore(
 
         // Platform-specific storage
         if (isApp && window.__TAURI__) {
-          // Desktop: Save to file system
           const backupDir = state.backupPath || (await getDefaultBackupPath());
-
-          // Ensure directory exists
           await window.__TAURI__.fs.createDir(backupDir, { recursive: true });
-
           const filePath = `${backupDir}/${fileName}`;
           await window.__TAURI__.fs.writeTextFile(filePath, content);
         } else {
-          // Web: Save to IndexedDB
           const { set: idbSet } = await import("idb-keyval");
           await idbSet(`autobackup-${id}`, content);
         }
 
-        // Update history
-        set((state) => ({
-          backupHistory: [
-            ...state.backupHistory,
-            {
-              id,
-              timestamp: Date.now(),
-              fileName,
-              size: stats.totalSize,
-              sessionCount: stats.sessionCount,
-              messageCount: stats.messageCount,
-            },
-          ].sort((a, b) => a.timestamp - b.timestamp),
-          totalSize: state.totalSize + stats.totalSize,
-        }));
-
-        // Update hash and timestamp
+        // Update markers for change detection
         const currentHash = simpleHash(
-          `${content.length}-${state.lastBackupTime}-${stats.sessionCount}-${stats.messageCount}`,
+          `${content.length}-${stats.sessionCount}-${stats.messageCount}`,
         );
         set({
           lastBackupHash: currentHash,
           lastBackupTime: Date.now(),
         });
 
-        // Rotate if needed
-        if (state.backupHistory.length > state.maxBackups) {
-          // Using type assertion to access internal method within store actions if needed,
-          // but here we can just call the function directly as it is part of the object we are returning
-          await (get() as any).deleteOldestBackup();
-        }
-
         console.log(`[AutoBackup] Backup created: ${fileName}`);
       } catch (error) {
         console.error("[AutoBackup] Failed to create backup:", error);
-      }
-    },
-
-    deleteOldestBackup: async () => {
-      const state = get();
-      if (state.backupHistory.length === 0) return;
-
-      const oldest = state.backupHistory[0];
-      await (get() as any).deleteBackup(oldest.id);
-      console.log(`[AutoBackup] Rotated oldest backup: ${oldest.fileName}`);
-    },
-
-    deleteBackup: async (backupId: string) => {
-      const state = get();
-      const backup = state.backupHistory.find((b) => b.id === backupId);
-
-      if (!backup) return;
-
-      try {
-        if (isApp && window.__TAURI__) {
-          const backupDir = state.backupPath || (await getDefaultBackupPath());
-          const filePath = `${backupDir}/${backup.fileName}`;
-          await window.__TAURI__.fs.removeFile(filePath);
-        } else {
-          const { del } = await import("idb-keyval");
-          await del(`autobackup-${backupId}`);
-        }
-
-        set((state) => {
-          const backupToRemove = state.backupHistory.find(
-            (b) => b.id === backupId,
-          );
-          if (!backupToRemove) return state;
-
-          return {
-            backupHistory: state.backupHistory.filter((b) => b.id !== backupId),
-            totalSize: state.totalSize - backupToRemove.size,
-          };
-        });
-        console.log(`[AutoBackup] Deleted backup: ${backup.fileName}`);
-      } catch (error) {
-        console.error("[AutoBackup] Failed to delete backup:", error);
-      }
-    },
-
-    clearAllBackups: async () => {
-      const state = get();
-
-      for (const backup of state.backupHistory) {
-        await (get() as any).deleteBackup(backup.id);
-      }
-
-      set({
-        backupHistory: [],
-        totalSize: 0,
-        lastBackupTime: 0,
-        lastBackupHash: "",
-      });
-
-      console.log("[AutoBackup] All backups cleared");
-    },
-
-    restoreBackup: async (backupId: string) => {
-      try {
-        const content = await (get() as any).loadBackupContent(backupId);
-
-        const { getLocalAppState, mergeAppState, setLocalAppState } =
-          await import("../utils/sync");
-
-        const backupState = JSON.parse(content);
-
-        // Validate structure
-        if (!backupState.chat || !backupState.config || !backupState.access) {
-          throw new Error("Invalid backup format");
-        }
-
-        // Merge with local state
-        const localState = getLocalAppState();
-        mergeAppState(localState, backupState);
-        setLocalAppState(localState);
-
-        const { showToast } = await import("../components/ui-lib");
-        const Locale = (await import("../locales")).default;
-        showToast(
-          Locale.BackupManager?.RestoreSuccess ||
-            "Backup restored successfully",
-        );
-
-        // Reload page to apply changes
-        location.reload();
-      } catch (error) {
-        console.error("[AutoBackup] Failed to restore backup:", error);
-        const { showToast } = await import("../components/ui-lib");
-        const Locale = (await import("../locales")).default;
-        showToast(
-          Locale.BackupManager?.RestoreFailed || "Failed to restore backup",
-        );
-      }
-    },
-
-    exportBackup: async (backupId: string) => {
-      try {
-        const state = get();
-        const backup = state.backupHistory.find((b) => b.id === backupId);
-
-        if (!backup) {
-          throw new Error("Backup not found");
-        }
-
-        const content = await (get() as any).loadBackupContent(backupId);
-
-        const { downloadAs } = await import("../utils");
-        downloadAs(content, backup.fileName);
-      } catch (error) {
-        console.error("[AutoBackup] Failed to export backup:", error);
       }
     },
 
@@ -312,47 +140,24 @@ export const useAutoBackupStore = createPersistStore(
         console.error("[AutoBackup] Failed to select backup path:", error);
       }
     },
-
-    addBackupRecord: (record: BackupRecord) => {
-      set((state) => ({
-        backupHistory: [...state.backupHistory, record].sort(
-          (a, b) => a.timestamp - b.timestamp,
-        ),
-        totalSize: state.totalSize + record.size,
-      }));
-    },
-
-    removeBackupRecord: (backupId: string) => {
-      set((state) => {
-        const backup = state.backupHistory.find((b) => b.id === backupId);
-        if (!backup) return state;
-
-        return {
-          backupHistory: state.backupHistory.filter((b) => b.id !== backupId),
-          totalSize: state.totalSize - backup.size,
-        };
-      });
-    },
-
-    loadBackupContent: async (backupId: string) => {
-      const state = get();
-
-      if (isApp && window.__TAURI__) {
-        const backup = state.backupHistory.find((b) => b.id === backupId);
-        if (!backup) throw new Error("Backup not found");
-
-        const backupDir = state.backupPath || (await getDefaultBackupPath());
-        const filePath = `${backupDir}/${backup.fileName}`;
-        return await window.__TAURI__.fs.readTextFile(filePath);
-      } else {
-        const { get: idbGet } = await import("idb-keyval");
-        const content = await idbGet<string>(`autobackup-${backupId}`);
-        if (!content) throw new Error("Backup not found");
-        return content;
-      }
-    },
   }),
   {
     name: StoreKey.AutoBackup,
+    version: 1.2,
+    migrate(persistedState, version) {
+      const state = persistedState as any;
+      if (version < 1.1) {
+        if (!state.intervalHours || state.intervalHours <= 0) {
+          state.intervalHours = 24;
+        }
+      }
+      // Remove deprecated fields in 1.2
+      if (version < 1.2) {
+        delete state.backupHistory;
+        delete state.maxBackups;
+        delete state.totalSize;
+      }
+      return state as any;
+    },
   },
 );

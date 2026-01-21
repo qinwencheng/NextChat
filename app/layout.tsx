@@ -7,7 +7,7 @@ import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 import { getServerSideConfig } from "./config/server";
-import { BackupScheduler } from "./components/backup-scheduler";
+import { BackupScheduler } from "./components/auto-backup/backup-scheduler";
 
 export const metadata: Metadata = {
   title: "NextChat",
