@@ -898,6 +898,17 @@ const en: LocaleType = {
     GenerateParams: "Generate Params",
     Detail: "Detail",
   },
+  Anchor: {
+    Title: "Floating Anchors",
+    Navigator: "Navigator",
+    Favorites: "Favorites",
+    Search: "Search...",
+    Unlock: "Unlock (Enable Auto-hide)",
+    Lock: "Lock (Disable Auto-hide)",
+    NoFavorites: "No Favorites",
+    AddToFavorites: "Add to Favorites",
+    Delete: "Delete",
+  },
   BackupManager: {
     Title: "Auto Backup Manager",
     Restore: "Restore",

@@ -885,6 +885,17 @@ const cn = {
     GenerateParams: "生成参数",
     Detail: "详情",
   },
+  Anchor: {
+    Title: "浮动面板",
+    Navigator: "目录",
+    Favorites: "收藏",
+    Search: "搜索...",
+    Unlock: "解锁 (启用自动隐藏)",
+    Lock: "锁定 (禁用自动隐藏)",
+    NoFavorites: "暂无收藏 Prompt",
+    AddToFavorites: "收藏到 Favorites",
+    Delete: "删除",
+  },
   BackupManager: {
     Title: "自动备份管理",
     Restore: "恢复",

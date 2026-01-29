@@ -87,6 +87,7 @@ import { Prompt, usePromptStore } from "../store/prompt";
 import Locale from "../locales";
 
 import { IconButton } from "./button";
+import { FloatingChatAnchors } from "./floating-chat-anchors";
 import styles from "./chat.module.scss";
 
 import {
@@ -986,6 +987,7 @@ export function ShortcutKeyModal(props: { onClose: () => void }) {
   );
 }
 
+// eslint-disable-next-line react-hooks/rules-of-hooks
 function _Chat() {
   type RenderMessage = ChatMessage & { preview?: boolean };
 
@@ -1798,6 +1800,7 @@ function _Chat() {
                   return (
                     <Fragment key={message.id}>
                       <div
+                        id={`msg-${message.id}`}
                         className={
                           isUser
                             ? styles["chat-message-user"]
@@ -2144,6 +2147,13 @@ function _Chat() {
             )}
           </div>
         </div>
+        {!isMobileScreen && (
+            <FloatingChatAnchors 
+                messages={session.messages} 
+                onInput={setUserInput}
+                containerRef={scrollRef}
+            />
+        )}
       </div>
       {showExport && (
         <ExportMessageModal onClose={() => setShowExport(false)} />
