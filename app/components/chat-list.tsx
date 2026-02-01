@@ -15,7 +15,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Path } from "../constant";
 import { MaskAvatar } from "./mask";
 import { Mask } from "../store/mask";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { showConfirm } from "./ui-lib";
 import { useMobileScreen } from "../utils";
 import clsx from "clsx";
@@ -23,6 +23,7 @@ import clsx from "clsx";
 export function ChatItem(props: {
   onClick?: () => void;
   onDelete?: () => void;
+  onEdit?: (newTitle: string) => void;
   title: string;
   count: number;
   time: string;
@@ -42,6 +43,26 @@ export function ChatItem(props: {
   }, [props.selected]);
 
   const { pathname: currentPath } = useLocation();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(props.title);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(props.title);
+    }
+  }, [props.title, isEditing]);
+
+  const handleEdit = () => {
+    if (!isEditing) return;
+    setIsEditing(false);
+    if (editValue.trim() && editValue !== props.title) {
+      props.onEdit?.(editValue.trim());
+    } else {
+      setEditValue(props.title);
+    }
+  };
+
   return (
     <Draggable draggableId={`${props.id}`} index={props.index}>
       {(provided) => (
@@ -76,7 +97,39 @@ export function ChatItem(props: {
             </div>
           ) : (
             <>
-              <div className={styles["chat-item-title"]}>{props.title}</div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={handleEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleEdit();
+                    } else if (e.key === "Escape") {
+                      setIsEditing(false);
+                      setEditValue(props.title);
+                    }
+                  }}
+                  autoFocus
+                  onFocus={(e) => e.currentTarget.select()} // 聚焦时执行全选
+                  className={styles["chat-item-input"]}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <div
+                  className={styles["chat-item-title"]}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditing(true);
+                    setEditValue(props.title);
+                  }}
+                >
+                  {props.title}
+                </div>
+              )}
+
               <div className={styles["chat-item-info"]}>
                 <div className={styles["chat-item-count"]}>
                   {Locale.ChatItem.ChatItemCount(props.count)}
@@ -160,6 +213,9 @@ export function ChatList(props: { narrow?: boolean }) {
                   ) {
                     chatStore.deleteSession(i);
                   }
+                }}
+                onEdit={(newTopic) => {
+                  chatStore.updateSessionTopic(i, newTopic);
                 }}
                 narrow={props.narrow}
                 mask={item.mask}

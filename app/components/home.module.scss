@@ -173,7 +173,8 @@
 }
 
 .chat-item {
-  padding: 10px 14px;
+  // 上padding -4px 适配标题height变大导致的视觉下沉的影响
+  padding: 6px 14px 10px 14px;
   background-color: var(--white);
   border-radius: 10px;
   margin-bottom: 10px;
@@ -199,10 +200,29 @@
   font-weight: bolder;
   display: block;
   width: calc(100% - 15px);
+  // 标题文字高度和input宽匹配，避免切换组件时input框位置下沉
+  height: 24px;
+  line-height: 24px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   animation: slide-in ease 0.3s;
+}
+
+input.chat-item-input[type="text"] {
+  max-width: 100%; 
+  padding-left: 5px;
+  margin: 0;
+  border: none;
+  // 从全局的36改为合适的24
+  min-height: 24px;
+  outline: 1px solid var(--primary);
+  background-color: transparent;
+  font-size: 14px;
+  font-weight: bolder;
+  color: var(--black);
+  text-align: left;
+  font-family: inherit;
 }
 
 .chat-item-delete {

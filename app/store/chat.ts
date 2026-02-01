@@ -651,6 +651,15 @@ export const useChatStore = createPersistStore(
         set(() => ({ sessions }));
       },
 
+      updateSessionTopic(sessionIndex: number, topic: string) {
+        const session = get().sessions.at(sessionIndex);
+        if (session) {
+          get().updateTargetSession(session, (session) => {
+            session.topic = topic;
+          });
+        }
+      },
+
       resetSession(session: ChatSession) {
         get().updateTargetSession(session, (session) => {
           session.messages = [];
