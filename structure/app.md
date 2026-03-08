@@ -1780,13 +1780,13 @@ export async function tauriStreamFetch(
   const { signal, ...fetchOptions } = options;
 
   return new Promise((resolve, reject) => {
-    window.__TAURI__.invoke("stream_fetch", {
+    window.__TAURI__.core.invoke("stream_fetch", {
       url,
       options: fetchOptions,
     }).then((streamId: string) => {
       const stream = new ReadableStream({
         start(controller) {
-          window.__TAURI__.event.listen(
+          window.__TAURI__.event?.listen(
             `stream-${streamId}`,
             (event: any) => {
               if (event.payload.type === "data") {
@@ -2314,4 +2314,3 @@ const nextConfig = {
 8. **配置构建**：环境变量 + 构建模式
 
 NextChat 采用 **分层架构**，各层职责清晰，易于扩展和维护。
-

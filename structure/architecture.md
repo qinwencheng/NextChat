@@ -221,7 +221,7 @@ SSE 流式响应
 ```
 前端 tauriStreamFetch()
   ↓
-window.__TAURI__.invoke("stream_fetch")
+window.__TAURI__.core.invoke("stream_fetch")
   ↓
 Rust: stream_fetch()
   ↓

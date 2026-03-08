@@ -1,4 +1,9 @@
 import { useEffect, useState } from "react";
+import { isTauri } from "@tauri-apps/api/core";
+import { writeText as tauriWriteText } from "@tauri-apps/plugin-clipboard-manager";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { check } from "@tauri-apps/plugin-updater";
 import { showToast } from "./components/ui-lib";
 import Locale from "./locales";
 import { RequestMessage } from "./client/api";
@@ -27,8 +32,8 @@ export function trimTopic(topic: string) {
 
 export async function copyToClipboard(text: string) {
   try {
-    if (window.__TAURI__) {
-      window.__TAURI__.writeText(text);
+    if (isTauri()) {
+      await tauriWriteText(text);
     } else {
       await navigator.clipboard.writeText(text);
     }
@@ -51,8 +56,8 @@ export async function copyToClipboard(text: string) {
 }
 
 export async function downloadAs(text: string, filename: string) {
-  if (window.__TAURI__) {
-    const result = await window.__TAURI__.dialog.save({
+  if (isTauri()) {
+    const result = await save({
       defaultPath: `${filename}`,
       filters: [
         {
@@ -68,7 +73,7 @@ export async function downloadAs(text: string, filename: string) {
 
     if (result !== null) {
       try {
-        await window.__TAURI__.fs.writeTextFile(result, text);
+        await writeTextFile(result, text);
         showToast(Locale.Download.Success);
       } catch (error) {
         showToast(Locale.Download.Failed);
@@ -354,7 +359,7 @@ export function fetch(
   url: string,
   options?: Record<string, unknown>,
 ): Promise<any> {
-  if (window.__TAURI__) {
+  if (isTauri()) {
     return tauriStreamFetch(url, options);
   }
   return window.fetch(url, options);
@@ -448,23 +453,17 @@ export function getOperationId(operation: {
 
 export function clientUpdate() {
   // this a wild for updating client app
-  return window.__TAURI__?.updater
-    .checkUpdate()
-    .then((updateResult) => {
-      if (updateResult.shouldUpdate) {
-        window.__TAURI__?.updater
-          .installUpdate()
-          .then((result) => {
-            showToast(Locale.Settings.Update.Success);
-          })
-          .catch((e) => {
-            console.error("[Install Update Error]", e);
-            showToast(Locale.Settings.Update.Failed);
-          });
+  if (!isTauri()) return Promise.resolve();
+  return check()
+    .then((update) => {
+      if (update) {
+        return update.downloadAndInstall().then(() => {
+          showToast(Locale.Settings.Update.Success);
+        });
       }
     })
     .catch((e) => {
-      console.error("[Check Update Error]", e);
+      console.error("[Update Error]", e);
       showToast(Locale.Settings.Update.Failed);
     });
 }

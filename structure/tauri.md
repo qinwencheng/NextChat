@@ -36,27 +36,15 @@ rust-version = "1.60"
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.5.4", features = [
-    "http-all",
-    "notification-all",
-    "fs-all",
-    "clipboard-all",
-    "dialog-all",
-    "shell-open",
-    "updater",
-    "window-close",
-    "window-hide",
-    "window-maximize",
-    "window-minimize",
-    "window-set-icon",
-    "window-set-ignore-cursor-events",
-    "window-set-resizable",
-    "window-show",
-    "window-start-dragging",
-    "window-unmaximize",
-    "window-unminimize",
-] }
-tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
+tauri = { version = "2", features = [] }
+tauri-plugin-window-state = { version = "2" }
+tauri-plugin-http = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-clipboard-manager = "2"
 percent-encoding = "2.3.1"
 reqwest = "0.11.18"
 futures-util = "0.3.30"
@@ -64,22 +52,16 @@ bytes = "1.7.2"
 ```
 
 **关键依赖**：
-- **tauri**: 核心框架（v1.5.4）
+- **tauri**: 核心框架（v2）
 - **reqwest**: HTTP 客户端（用于流式请求）
 - **futures-util**: 异步流处理
 - **bytes**: 字节缓冲区
 - **serde/serde_json**: 序列化/反序列化
-- **tauri-plugin-window-state**: 窗口状态持久化插件
+- **tauri-plugin-window-state**: 窗口状态持久化插件（v2）
 
-**Tauri 功能特性**：
-- `http-all`: 完整 HTTP 支持
-- `fs-all`: 完整文件系统访问
-- `clipboard-all`: 剪贴板操作
-- `dialog-all`: 原生对话框
-- `notification-all`: 系统通知
-- `shell-open`: 打开外部链接
-- `updater`: 自动更新
-- `window-*`: 窗口管理功能
+**Tauri v2 说明**：
+- 功能权限通过 `src-tauri/capabilities/*.json` 管理
+- 可用能力来自核心能力 + 各插件能力（http/fs/dialog/shell/notification/updater 等）
 
 ---
 
@@ -92,8 +74,10 @@ bytes = "1.7.2"
   "build": {
     "beforeBuildCommand": "yarn export",
     "beforeDevCommand": "yarn export:dev",
-    "devPath": "http://localhost:3000",
-    "distDir": "../out",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../out"
+  },
+  "app": {
     "withGlobalTauri": true
   }
 }
@@ -102,61 +86,33 @@ bytes = "1.7.2"
 **关键点**：
 - **beforeBuildCommand**: 生产构建前执行 `yarn export`（Next.js 静态导出）
 - **beforeDevCommand**: 开发模式前执行 `yarn export:dev`
-- **devPath**: 开发服务器地址
-- **distDir**: 前端构建输出目录（`../out`）
+- **devUrl**: 开发服务器地址
+- **frontendDist**: 前端构建输出目录（`../out`）
 - **withGlobalTauri**: 启用全局 Tauri API
 
 #### 1.3.2 权限配置
 
 ```json
 {
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      },
-      "dialog": {
-        "all": true
-      },
-      "clipboard": {
-        "all": true
-      },
-      "window": {
-        "all": false,
-        "close": true,
-        "hide": true,
-        "maximize": true,
-        "minimize": true,
-        "show": true,
-        "startDragging": true
-      },
-      "fs": {
-        "all": true
-      },
-      "notification": {
-        "all": true
-      },
-      "http": {
-        "all": true,
-        "request": true,
-        "scope": ["https://*", "http://*"]
-      }
+  "app": {
+    "security": { "csp": null }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": ["https://.../latest.json"],
+      "pubkey": "..."
     }
+  },
+  "bundle": {
+    "externalBin": []
   }
 }
 ```
 
 **安全策略**：
-- **默认禁用所有权限**（`all: false`）
-- **按需启用特定功能**：
-  - Shell：仅允许打开外部链接
-  - Dialog：完整对话框权限
-  - Clipboard：完整剪贴板权限
-  - Window：部分窗口管理权限
-  - FS：完整文件系统权限
-  - HTTP：完整 HTTP 权限，允许所有 HTTP/HTTPS 请求
+- **Tauri v2 使用 capability 权限模型**：在 `src-tauri/capabilities/*.json` 按窗口和功能授权
+- **按需启用插件权限**：仅为需要的窗口授予 `dialog/fs/http/shell/notification/updater` 等能力
+- **最小权限原则**：避免给默认窗口开放不必要能力
 
 #### 1.3.3 打包配置
 
@@ -231,7 +187,7 @@ fn main() {
 
 2. **命令注册**：
    - `stream::stream_fetch`：注册流式 HTTP 请求命令
-   - 前端通过 `window.__TAURI__.invoke("stream_fetch", ...)` 调用
+   - 前端通过 `window.__TAURI__.core.invoke("stream_fetch", ...)` 调用
 
 3. **插件加载**：
    - `tauri_plugin_window_state`：自动保存/恢复窗口位置和大小
@@ -412,7 +368,7 @@ pub async fn stream_fetch(
 ```
 前端调用
   ↓
-window.__TAURI__.invoke("stream_fetch", { method, url, headers, body })
+window.__TAURI__.core.invoke("stream_fetch", { method, url, headers, body })
   ↓
 Rust: stream_fetch() 函数
   ↓
@@ -557,7 +513,7 @@ export async function tauriStreamFetch(
   const { signal, ...fetchOptions } = options;
 
   return new Promise((resolve, reject) => {
-    window.__TAURI__.invoke("stream_fetch", {
+    window.__TAURI__.core.invoke("stream_fetch", {
       method: fetchOptions.method || "GET",
       url,
       headers: fetchOptions.headers || {},
@@ -567,7 +523,7 @@ export async function tauriStreamFetch(
 
       const stream = new ReadableStream({
         start(controller) {
-          window.__TAURI__.event.listen(
+          window.__TAURI__.event?.listen(
             "stream-response",
             (event: any) => {
               if (event.payload.request_id !== request_id) return;
@@ -595,7 +551,7 @@ export async function tauriStreamFetch(
 ```
 前端 TypeScript
   ↓
-window.__TAURI__.invoke("stream_fetch", { method, url, headers, body })
+window.__TAURI__.core.invoke("stream_fetch", { method, url, headers, body })
   ↓
 Rust: stream_fetch()
   ↓
@@ -657,11 +613,11 @@ yarn tauri build
 
 ### 5.3 自动更新
 
-```rust
+```typescript
 // 前端调用
-window.__TAURI__.updater.checkUpdate().then((updateResult) => {
-  if (updateResult.shouldUpdate) {
-    window.__TAURI__.updater.installUpdate();
+window.__TAURI__.updater.check().then((update) => {
+  if (update) {
+    update.downloadAndInstall();
   }
 });
 ```
@@ -724,4 +680,3 @@ window.__TAURI__.updater.checkUpdate().then((updateResult) => {
 - **签名验证**：自动更新安全
 
 NextChat 的 Rust 后端通过 Tauri 框架，实现了高性能的桌面应用功能，特别是流式 HTTP 请求，为前端提供了更好的性能和用户体验。
-

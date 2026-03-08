@@ -714,7 +714,7 @@ return <YourComponent data={store.items} />;
 | `src-tauri/src/main.rs` | Tauri 入口，命令注册 | 整个文件（约 13 行） |
 | `src-tauri/src/stream.rs` | 流式命令示例 | `stream_fetch` 命令（第 34-144 行） |
 | `src-tauri/Cargo.toml` | Rust 依赖配置 | 依赖列表（第 17-43 行） |
-| `src-tauri/tauri.conf.json` | Tauri 功能权限 | `allowlist`（第 15-58 行） |
+| `src-tauri/tauri.conf.json` | Tauri 应用配置 | `app/plugins/build` 等字段 |
 | `app/global.d.ts` | TypeScript 类型定义 | `Window.__TAURI__`（第 13-43 行） |
 | `app/utils/stream.ts` | 前端调用封装 | `fetch()` 函数（第 22-108 行） |
 
@@ -774,31 +774,22 @@ fn main() {
 }
 ```
 
-3. **配置权限**：在 `tauri.conf.json` 中启用所需功能
+3. **配置权限**：在 `src-tauri/capabilities/*.json` 中按需启用能力
 
 ```json
-// src-tauri/tauri.conf.json:15-58
+// src-tauri/capabilities/default.json（示意）
 {
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true,
-        "execute": true,        // 如需执行命令
-        "sidecar": true         // 如需 sidecar
-      },
-      "fs": {
-        "all": true             // 如需文件系统访问
-      },
-      "notification": {
-        "all": true             // 如需系统通知
-      },
-      "globalShortcut": {
-        "all": true             // 如需全局快捷键
-      }
-    }
-  }
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "dialog:default",
+    "fs:default",
+    "http:default",
+    "notification:default"
+  ]
 }
 ```
 
@@ -808,7 +799,10 @@ fn main() {
 // app/global.d.ts
 declare interface Window {
   __TAURI__?: {
-    invoke(command: string, payload?: Record<string, unknown>): Promise<any>;
+    invoke?: (command: string, payload?: Record<string, unknown>) => Promise<any>;
+    core?: {
+      invoke(command: string, payload?: Record<string, unknown>): Promise<any>;
+    };
     // 添加你的命令类型
     // 或者在调用处使用泛型
   };
@@ -821,7 +815,7 @@ declare interface Window {
 // 在组件中调用
 async function callYourCommand() {
   if (window.__TAURI__) {
-    const result = await window.__TAURI__.invoke("your_command", {
+    const result = await window.__TAURI__.core.invoke("your_command", {
       arg1: "hello",
       arg2: 42,
     });
@@ -1009,7 +1003,7 @@ if (window.__TAURI__?.notification) {
 1. **命令命名**：使用 snake_case，如 `stream_fetch`、`your_command`
 2. **错误处理**：命令返回 `Result<T, String>`，错误信息会传递到前端
 3. **事件命名**：使用 kebab-case，如 `stream-response`、`your-event`
-4. **权限最小化**：只在 `allowlist` 中启用必需的功能
+4. **权限最小化**：只在 capability 文件中启用必需能力
 5. **异步优先**：IO 密集型操作使用 `async` 命令
 6. **类型同步**：确保 Rust 和 TypeScript 的类型定义一致
 
@@ -1029,7 +1023,7 @@ if (window.__TAURI__?.notification) {
 ```toml
 # src-tauri/Cargo.toml
 [dependencies]
-tauri = { version = "1.5.4", features = [...] }
+tauri = { version = "2", features = [] }
 
 # 常用依赖
 serde = { version = "1.0", features = ["derive"] }
@@ -1717,24 +1711,8 @@ src-tauri/
 ```json
 // src-tauri/tauri.conf.json
 {
-  "tauri": {
-    "bundle": {
-      "externalBin": [
-        "binaries/your-script"
-      ]
-    },
-    "allowlist": {
-      "shell": {
-        "sidecar": true,
-        "scope": [
-          {
-            "name": "binaries/your-script",
-            "sidecar": true,
-            "args": true
-          }
-        ]
-      }
-    }
+  "bundle": {
+    "externalBin": ["binaries/your-script"]
   }
 }
 ```
@@ -1815,7 +1793,7 @@ fn main() {
 // 调用 sidecar
 async function runScript(args: string[]) {
     if (window.__TAURI__) {
-        const result = await window.__TAURI__.invoke("run_sidecar", { args });
+        const result = await window.__TAURI__.core.invoke("run_sidecar", { args });
         console.log("Result:", result);
     }
 }
@@ -2039,7 +2017,7 @@ pub struct RepoInfo {
 3. **异步优先**：长时间运行的命令使用 `async`
 4. **进度反馈**：使用 `window.emit()` 发送进度事件
 5. **资源清理**：确保子进程正确终止，避免僵尸进程
-6. **权限配置**：在 `tauri.conf.json` 中正确配置 `shell` 权限
+6. **权限配置**：在 capability 文件中正确配置 `shell` / sidecar 能力
 
 ### 7.5 示例参考
 
@@ -2569,9 +2547,9 @@ export const useReminderStore = createPersistStore(
 - [ ] 在 `src-tauri/src/` 下创建 Rust 模块
 - [ ] 使用 `#[tauri::command]` 宏定义命令
 - [ ] 在 `src-tauri/src/main.rs` 中引入模块并注册命令
-- [ ] 在 `src-tauri/tauri.conf.json` 的 `allowlist` 中配置权限
+- [ ] 在 `src-tauri/capabilities/*.json` 中配置权限
 - [ ] 在 `app/global.d.ts` 中添加类型定义（可选）
-- [ ] 在前端通过 `window.__TAURI__.invoke()` 调用
+- [ ] 在前端通过 `window.__TAURI__.core.invoke()` 调用
 
 #### 消息拦截/注入检查清单
 
@@ -2603,8 +2581,7 @@ export const useReminderStore = createPersistStore(
 ## 参考资源
 
 - [NextChat GitHub 仓库](https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web)
-- [Tauri 官方文档](https://tauri.app/v1/guides/)
+- [Tauri 官方文档](https://v2.tauri.app/)
 - [Next.js 官方文档](https://nextjs.org/docs)
 - [Zustand 官方文档](https://github.com/pmndrs/zustand)
 - [项目 CLAUDE.md](../CLAUDE.md) - 项目架构详细说明
-
