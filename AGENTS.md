@@ -9,14 +9,14 @@
 - `docs/` and `structure/`: user docs and architecture/developer notes.
 
 ## Build, Test, and Development Commands
-- `yarn install`: install JS dependencies (Yarn 1.x).
-- `yarn dev`: run web app locally with mask auto-build.
-- `yarn build && yarn start`: production web build and server startup.
-- `yarn lint`: run Next.js ESLint checks.
-- `yarn test`: run Jest in watch mode.
-- `yarn test:ci`: run Jest once for CI.
-- `yarn app:dev`: run Tauri desktop app in development.
-- `yarn app:build`: package desktop app.
+- `pnpm install`: install JS dependencies (pnpm).
+- `pnpm dev`: run web app locally with mask auto-build.
+- `pnpm build && pnpm start`: production web build and server startup.
+- `pnpm lint`: run Next.js ESLint checks.
+- `pnpm test`: run Jest in watch mode.
+- `pnpm test:ci`: run Jest once for CI.
+- `pnpm app:dev`: run Tauri desktop app in development.
+- `pnpm app:build`: package desktop app.
 
 ## Coding Style & Naming Conventions
 - TypeScript-first; keep `strict`-compatible types (see `tsconfig.json`).
@@ -38,7 +38,7 @@
   - clear summary and rationale,
   - linked issue (if applicable),
   - screenshots/GIFs for UI changes,
-  - test/lint evidence (`yarn lint`, `yarn test:ci`).
+  - test/lint evidence (`pnpm lint`, `pnpm test:ci`).
 
 ## Security & Configuration Tips
 - Use `.env.template` as the source of required variables; keep local secrets in `.env.local`.

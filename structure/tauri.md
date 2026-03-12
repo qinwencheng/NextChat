@@ -72,8 +72,8 @@ bytes = "1.7.2"
 ```json
 {
   "build": {
-    "beforeBuildCommand": "yarn export",
-    "beforeDevCommand": "yarn export:dev",
+    "beforeBuildCommand": "pnpm export",
+    "beforeDevCommand": "pnpm export:dev",
     "devUrl": "http://localhost:3000",
     "frontendDist": "../out"
   },
@@ -84,8 +84,8 @@ bytes = "1.7.2"
 ```
 
 **关键点**：
-- **beforeBuildCommand**: 生产构建前执行 `yarn export`（Next.js 静态导出）
-- **beforeDevCommand**: 开发模式前执行 `yarn export:dev`
+- **beforeBuildCommand**: 生产构建前执行 `pnpm export`（Next.js 静态导出）
+- **beforeDevCommand**: 开发模式前执行 `pnpm export:dev`
 - **devUrl**: 开发服务器地址
 - **frontendDist**: 前端构建输出目录（`../out`）
 - **withGlobalTauri**: 启用全局 Tauri API
@@ -580,30 +580,30 @@ Rust: stream_fetch()
 
 ```bash
 # 启动前端开发服务器
-yarn export:dev
+pnpm export:dev
 
 # 启动 Tauri 开发模式
-yarn tauri dev
+pnpm tauri dev
 ```
 
 **流程**：
-1. `yarn export:dev` 启动 Next.js 开发服务器（`http://localhost:3000`）
-2. `yarn tauri dev` 启动 Tauri 应用，加载开发服务器
+1. `pnpm export:dev` 启动 Next.js 开发服务器（`http://localhost:3000`）
+2. `pnpm tauri dev` 启动 Tauri 应用，加载开发服务器
 3. 支持热重载（前端）
 
 ### 5.2 生产构建
 
 ```bash
 # 构建前端静态文件
-yarn export
+pnpm export
 
 # 构建 Tauri 应用
-yarn tauri build
+pnpm tauri build
 ```
 
 **流程**：
-1. `yarn export` 生成 Next.js 静态导出（`out/` 目录）
-2. `yarn tauri build` 编译 Rust 代码并打包应用
+1. `pnpm export` 生成 Next.js 静态导出（`out/` 目录）
+2. `pnpm tauri build` 编译 Rust 代码并打包应用
 3. 生成平台特定的安装包
 
 **输出**：

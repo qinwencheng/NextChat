@@ -10,35 +10,35 @@ NextChat is a multi-platform ChatGPT/LLM client supporting 16+ AI providers (Ope
 
 ### Development
 ```bash
-yarn install                # Install dependencies
-yarn dev                    # Web development with hot reload
-yarn app:dev               # Desktop app development (Tauri)
-yarn export:dev            # Static export dev mode
+pnpm install                # Install dependencies
+pnpm dev                    # Web development with hot reload
+pnpm app:dev               # Desktop app development (Tauri)
+pnpm export:dev            # Static export dev mode
 ```
 
 ### Building
 ```bash
-yarn build                 # Production web build (standalone)
-yarn export               # Static export build (for Tauri/static hosting)
-yarn app:build            # Desktop app production build
-yarn mask                 # Generate mask/prompt template bundles
+pnpm build                 # Production web build (standalone)
+pnpm export               # Static export build (for Tauri/static hosting)
+pnpm app:build            # Desktop app production build
+pnpm mask                 # Generate mask/prompt template bundles
 ```
 
 ### Testing
 ```bash
-yarn test                 # Run Jest tests in watch mode
-yarn test:ci             # Run tests in CI mode (no watch)
+pnpm test                 # Run Jest tests in watch mode
+pnpm test:ci             # Run tests in CI mode (no watch)
 ```
 
 ### Linting
 ```bash
-yarn lint                # Run ESLint
+pnpm lint                # Run ESLint
 ```
 
 ### Other
 ```bash
-yarn prompts             # Fetch latest prompt templates
-yarn proxy-dev           # Dev with proxychains (for restricted networks)
+pnpm prompts             # Fetch latest prompt templates
+pnpm proxy-dev           # Dev with proxychains (for restricted networks)
 ```
 
 ## Architecture
@@ -128,8 +128,8 @@ Each LLM provider follows this structure:
 - **Webpack**: SVGR loader for SVG → React components
 
 **Tauri Pipeline**:
-- `yarn export` builds Next.js static export
-- `yarn tauri build` packages into native app
+- `pnpm export` builds Next.js static export
+- `pnpm tauri build` packages into native app
 - Rust backend handles streaming, native dialogs, window management
 
 ## Key Directories
@@ -186,7 +186,7 @@ Masks are reusable conversation templates with:
 
 **Location**: `/app/masks/` (TypeScript source) → `/public/masks.json` (compiled)
 
-**Build**: `yarn mask` compiles masks from `/app/masks/*.ts` to JSON
+**Build**: `pnpm mask` compiles masks from `/app/masks/*.ts` to JSON
 
 ### MCP (Model Context Protocol) Support
 
@@ -209,7 +209,7 @@ Enable with `ENABLE_MCP=true` environment variable.
 
 **Run single test**:
 ```bash
-node --no-warnings --experimental-vm-modules $(yarn bin jest) path/to/test.test.ts
+node --no-warnings --experimental-vm-modules $(pnpm bin jest) path/to/test.test.ts
 ```
 
 ### Environment Variables
@@ -261,13 +261,13 @@ Configured in `tsconfig.json` and `jest.config.ts`.
 
 1. **Vercel/Web**: Deploy with environment variables, uses API routes as proxy
 2. **Docker**: `docker pull yidadaa/chatgpt-next-web`, configure via env vars
-3. **Static Export**: `yarn export` → deploy to any static host
-4. **Desktop App**: `yarn app:build` → platform-specific installers
-5. **Self-hosted**: `yarn build` + `yarn start` for Node.js server
+3. **Static Export**: `pnpm export` → deploy to any static host
+4. **Desktop App**: `pnpm app:build` → platform-specific installers
+5. **Self-hosted**: `pnpm build` + `pnpm start` for Node.js server
 
 ## Notes
 
-- **Package manager**: Yarn 1.22.19 (specified in `packageManager` field)
+- **Package manager**: pnpm (specified in `packageManager` field)
 - **Node.js version**: >= 18 (check `.nvmrc`)
 - **TypeScript**: Strict mode enabled
 - **i18n**: Add translations in `/app/locales/{lang}.ts`

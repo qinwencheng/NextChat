@@ -114,7 +114,7 @@
 
 | 工具 | 用途 |
 |------|------|
-| **Yarn** | 包管理器 |
+| **pnpm** | 包管理器 |
 | **Webpack** | 模块打包（Next.js 内置） |
 | **Cargo** | Rust 包管理器 |
 | **Tauri CLI** | 桌面应用构建 |
@@ -420,8 +420,8 @@ Next.js API Routes (代理层)
 **部署方式**：
 1. **Vercel**：一键部署
 2. **Docker**：`docker pull yidadaa/chatgpt-next-web`
-3. **静态托管**：`yarn export` + 任何静态服务器
-4. **自托管**：`yarn build` + `yarn start`
+3. **静态托管**：`pnpm export` + 任何静态服务器
+4. **自托管**：`pnpm build` + `pnpm start`
 
 ---
 
@@ -454,8 +454,8 @@ Tauri Rust 后端
   - 构建复杂度较高
 
 **构建流程**：
-1. `yarn export`：生成 Next.js 静态导出
-2. `yarn tauri build`：编译 Rust 代码并打包
+1. `pnpm export`：生成 Next.js 静态导出
+2. `pnpm tauri build`：编译 Rust 代码并打包
 3. 生成安装包（`.msi`、`.dmg`、`.deb`）
 
 ---
@@ -672,17 +672,17 @@ git clone https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web.git
 cd ChatGPT-Next-Web
 
 # 2. 安装依赖
-yarn install
+pnpm install
 
 # 3. 配置环境变量
 cp .env.template .env.local
 # 编辑 .env.local，添加 API 密钥
 
 # 4. 启动开发服务器
-yarn dev
+pnpm dev
 
 # 5. 启动 Tauri 开发模式（可选）
-yarn tauri dev
+pnpm tauri dev
 ```
 
 ---
@@ -700,7 +700,7 @@ yarn tauri dev
 
 1. **找到组件**：`app/components/`
 2. **修改样式**：`app/styles/`
-3. **测试**：`yarn dev`
+3. **测试**：`pnpm dev`
 
 #### 6.2.3 添加国际化
 
@@ -719,7 +719,7 @@ yarn tauri dev
 ### 6.3 代码规范
 
 - **TypeScript**：严格模式
-- **ESLint**：`yarn lint`
+- **ESLint**：`pnpm lint`
 - **格式化**：Prettier（推荐）
 - **命名**：
   - 组件：PascalCase
@@ -733,10 +733,10 @@ yarn tauri dev
 
 ```bash
 # 运行测试
-yarn test
+pnpm test
 
 # CI 模式
-yarn test:ci
+pnpm test:ci
 ```
 
 **测试文件**：
