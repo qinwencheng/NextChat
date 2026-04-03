@@ -34,11 +34,8 @@
 ## Commit & Pull Request Guidelines
 - Follow Conventional Commit style seen in history: `feat:`, `fix:`, `docs:`, `chore:`.
 - Keep commits focused and scoped to one logical change.
-- PRs should include:
-  - clear summary and rationale,
-  - linked issue (if applicable),
-  - screenshots/GIFs for UI changes,
-  - test/lint evidence (`pnpm lint`, `pnpm test:ci`).
+- Use SSH for GitHub pushes in this repo: HTTPS auth is not configured in the current environment, so push with `git push git@github.com:qinwencheng/NextChat.git <branch>:<branch>` or set an SSH `pushurl` first.
+- PRs should include a clear summary and rationale, linked issue (if applicable), screenshots/GIFs for UI changes, and test/lint evidence (`pnpm lint`, `pnpm test:ci`).
 
 ## Security & Configuration Tips
 - Use `.env.template` as the source of required variables; keep local secrets in `.env.local`.
